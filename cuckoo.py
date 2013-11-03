@@ -6,12 +6,50 @@
 import tweepy
 import pygame
 import time
+from RPIO import PWM
+import RPIO
+
+lastangle=-1
+
+def angle2time(angle):
+    if( angle >= 180):
+      return 2360
+    elif( angle <= 0 ):
+      return 490
+    else:
+      return ((2360-490)/180*angle+490)
+
+def diff(angle):
+   if( lastangle == -1 ):
+     return angle
+   if( angle > lastangle ):
+     return angle-lastangle
+   elif( angle < lastangle):
+     return lastangle-angle
+   else:
+     return 0
+
+def set_angle(angle):
+  servos = PWM.Servo()
+  diff_angle=diff(angle)
+  if( diff_angle <> 0 ):
+    servos.set_servo(18,angle2time(angle))
+    global lastangle
+    lastangle=angle
+    sleeptime=float((0.5/180)*diff_angle)
+    if( sleeptime < 0.01):
+      sleeptime=0.01
+    print "sleeptime is "+str(sleeptime)
+    print "diff_angle is "+str(diff_angle)
+    time.sleep(0.5)
+    servos.stop_servo(18)
+
 
 #OAuth Klumpert
-consumer_key = 'YATD2iNsgGc4IbByonVwIw'
-consumer_secret = 'RTYQC2uGTspFHAkVFMhbibnkMxX9QEatglKiNzKSdJ8'
-access_token = '136590716-aUoInrZvBskV9ScL9o9AAt71Pokyd0hBpqLEIFxO'
-access_token_secret = 'Cc3hdNdkVxtMlcFxqMNysg3TgGOFtObTdBhVXRNSmbc7c'
+consumer_key = ''
+consumer_secret = ''
+access_token = ''
+access_token_secret = ''
   
 
 class StreamListener(tweepy.StreamListener):
@@ -32,6 +70,12 @@ class StreamListener(tweepy.StreamListener):
 
 def birdistheword():
   pygame.mixer.music.play()
+  RPIO.output(17, True)
+  set_angle(0)
+  set_angle(90)
+  set_angle(0) 
+  RPIO.output(17,False)
+  RPIO.cleanup()
   #wait for music to play
   if( wait_for_completion ):
     print 'waiting'
@@ -40,10 +84,11 @@ def birdistheword():
 
 
 pygame.mixer.init()
-pygame.mixer.music.load("aktuell.wav")
+pygame.mixer.music.load("cuckoo-clock.mp3")
+RPIO.setup(17, RPIO.OUT)
 
 wait_for_completion = False
-listen_for = ['#pipifein']
+listen_for = ['#cuckoo']
 
 # OAuth process, using the keys and tokens
 auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
